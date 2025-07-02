@@ -32,11 +32,67 @@ static void test_string_to_upper(void **state) {
     string_free(&expected);
 }
 
+static void test_string_find(void **state) {
+    str_t string = string_create_from_cstr("This is simple str!");
+    assert_int_equal(string_find(&string, 'T'), 0);
+    assert_int_equal(string_find(&string, 'i'), 2);
+    assert_int_equal(string_find(&string, '!'), 18);
+    assert_int_equal(string_find(&string, 'a'), STRING_NOT_FOUND);
+    string_free(&string);
+}
+
+static void test_string_find_substr(void** state) {
+    str_t string = string_create_from_cstr("This is simple str!");
+    str_t substr1 = string_create_from_cstr("This ");
+    str_t substr2 = string_create_from_cstr("simple str!");
+
+    assert_int_equal(string_substr(&string, &substr1), 0);
+    assert_int_equal(string_substr(&string, &substr2), 8);
+
+    string_free(&string);
+    string_free(&substr1);
+    string_free(&substr2);
+}
+
+static void test_tokenizer(void** state) {
+    str_t string = string_create_from_cstr("This is string;with-multiple:delims");
+    str_view_t str_view = string_view_create_from_string(&string);
+    str_view_t delims = string_view_create_from_cstr(" ;:-", 4);
+    auto token = string_tokenizer_init(&str_view, &delims);
+    auto str = string_tokenizer_next(&token);
+    auto this = string_view_create_from_cstr("This", 4);
+    assert_int_equal(string_view_equal(&str, &this), true);
+    str = string_tokenizer_next(&token);
+    this = string_view_create_from_cstr("is", 2);
+    assert_int_equal(string_view_equal(&str, &this), true);
+    str = string_tokenizer_next(&token);
+    this = string_view_create_from_cstr("string", 6);
+    assert_int_equal(string_view_equal(&str, &this), true);
+    str = string_tokenizer_next(&token);
+    this = string_view_create_from_cstr("with", 4);
+    assert_int_equal(string_view_equal(&str, &this), true);
+    str = string_tokenizer_next(&token);
+    this = string_view_create_from_cstr("multiple", 8);
+    assert_int_equal(string_view_equal(&str, &this), true);
+    str = string_tokenizer_next(&token);
+    this = string_view_create_from_cstr("delims", 6);
+    assert_int_equal(string_view_equal(&str, &this), true);
+    str = string_tokenizer_next(&token);
+    assert_int_equal(token.valid, false);
+    assert_int_equal(str.size, 0);
+    assert_null(str.data);
+    assert_int_equal(str.valid, false);
+
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_string_create),
         cmocka_unit_test(test_string_to_lower),
         cmocka_unit_test(test_string_to_upper),
+        cmocka_unit_test(test_string_find),
+        cmocka_unit_test(test_string_find_substr),
+        cmocka_unit_test(test_tokenizer),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
