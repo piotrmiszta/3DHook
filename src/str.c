@@ -9,7 +9,8 @@ static void (*internal_free)(void *) = free;
 
 static bool realloc_str(str_t string[static 1], u64 new_size);
 
-void string_register_allocator(void *(*str_alloc)(u64 size), void *(*str_realloc)(void *ptr, u64 size),
+void string_register_allocator(void *(*str_alloc)(u64 size),
+                               void *(*str_realloc)(void *ptr, u64 size),
                                void (*str_free)(void *ptr))
 {
     internal_alloc = str_alloc;
@@ -26,7 +27,8 @@ void string_reset_allocator(void)
 
 bool string_is_default_allocator(void)
 {
-    return ((internal_alloc == malloc) && (internal_free == free) && (internal_realloc == realloc));
+    return ((internal_alloc == malloc) && (internal_free == free) &&
+            (internal_realloc == realloc));
 }
 
 str_t string_create_with_size(u64 size)
@@ -222,7 +224,8 @@ str_view_t string_view_create_from_cstr(const char data[static 1], u64 size)
     return (str_view_t){data, size, true};
 }
 
-bool string_view_equal(const str_view_t a[static 1], const str_view_t b[static 1])
+bool string_view_equal(const str_view_t a[static 1],
+                       const str_view_t b[static 1])
 {
     if (a->size != b->size)
     {
@@ -250,7 +253,8 @@ s64 string_view_find(const str_t string[static 1], char ch)
     }
     return STRING_NOT_FOUND;
 }
-s64 string_view_substr(const str_t string[static 1], const str_t substr[static 1])
+s64 string_view_substr(const str_t string[static 1],
+                       const str_t substr[static 1])
 {
     s64 found = STRING_NOT_FOUND;
     for (u64 i = 0; i < string->size; i++)
@@ -272,7 +276,8 @@ s64 string_view_substr(const str_t string[static 1], const str_t substr[static 1
     return found;
 }
 
-str_tokenizer_t string_tokenizer_init(const str_view_t string[static 1], const str_view_t delims[static 1])
+str_tokenizer_t string_tokenizer_init(const str_view_t string[static 1],
+                                      const str_view_t delims[static 1])
 {
     return (str_tokenizer_t){string, delims, 0, true};
 }
@@ -295,8 +300,9 @@ str_view_t string_tokenizer_next(str_tokenizer_t tokenizer[static 1])
         {
             if (tokenizer->string->data[i] == tokenizer->delims->data[j])
             {
-                str_view_t res = {&tokenizer->string->data[tokenizer->current_index], i - tokenizer->current_index,
-                                  true};
+                str_view_t res = {
+                    &tokenizer->string->data[tokenizer->current_index],
+                    i - tokenizer->current_index, true};
                 tokenizer->current_index = i;
                 return res;
             }
@@ -305,7 +311,8 @@ str_view_t string_tokenizer_next(str_tokenizer_t tokenizer[static 1])
     if (tokenizer->valid && tokenizer->current_index != tokenizer->string->size)
     {
         str_view_t res = {&tokenizer->string->data[tokenizer->current_index],
-                          tokenizer->string->size - tokenizer->current_index, true};
+                          tokenizer->string->size - tokenizer->current_index,
+                          true};
         tokenizer->current_index = tokenizer->string->size;
         tokenizer->valid = false;
         return res;

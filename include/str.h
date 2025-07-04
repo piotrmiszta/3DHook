@@ -29,7 +29,8 @@ typedef struct str_tokenizer_t
     bool valid;
 } str_tokenizer_t;
 
-void string_register_allocator(void *(*str_alloc)(u64 size), void *(*str_realloc)(void *ptr, u64 size),
+void string_register_allocator(void *(*str_alloc)(u64 size),
+                               void *(*str_realloc)(void *ptr, u64 size),
                                void (*str_free)(void *ptr));
 void string_reset_allocator(void);
 bool string_is_default_allocator(void);
@@ -58,11 +59,14 @@ u64 string_replace(str_t string[static 1], char ch, char val);
 
 str_view_t string_view_create_from_string(const str_t string[static 1]);
 str_view_t string_view_create_from_cstr(const char data[static 1], u64 size);
-bool string_view_equal(const str_view_t a[static 1], const str_view_t b[static 1]);
+bool string_view_equal(const str_view_t a[static 1],
+                       const str_view_t b[static 1]);
 s64 string_view_find(const str_t string[static 1], char ch);
-s64 string_view_substr(const str_t string[static 1], const str_t substr[static 1]);
+s64 string_view_substr(const str_t string[static 1],
+                       const str_t substr[static 1]);
 
-str_tokenizer_t string_tokenizer_init(const str_view_t string[static 1], const str_view_t delims[static 1]);
+str_tokenizer_t string_tokenizer_init(const str_view_t string[static 1],
+                                      const str_view_t delims[static 1]);
 str_view_t string_tokenizer_next(str_tokenizer_t tokenizer[static 1]);
 void string_tokenizer_reset(str_tokenizer_t tokenizer[static 1]);
 
