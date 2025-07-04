@@ -2,6 +2,7 @@
 #define STR_H_
 
 #include <stddef.h>
+#include <stdio.h>
 #include <types.h>
 
 #define STRING_NOT_FOUND -101
@@ -69,5 +70,11 @@ str_tokenizer_t string_tokenizer_init(const str_view_t string[static 1],
                                       const str_view_t delims[static 1]);
 str_view_t string_tokenizer_next(str_tokenizer_t tokenizer[static 1]);
 void string_tokenizer_reset(str_tokenizer_t tokenizer[static 1]);
+
+void string_fprintf(FILE *stream, const str_t string[static 1]);
+void string_view_fprintf(FILE *stream, const str_view_t string[static 1]);
+
+#define STRING_VIEW_CSTR(str)                                                  \
+    string_view_create_from_cstr((str), sizeof((str)) - 1)
 
 #endif

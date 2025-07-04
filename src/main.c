@@ -1,10 +1,15 @@
 #include "server.h"
 #include <stdio.h>
+#include <str.h>
 
 int main(int, char **)
 {
+    setvbuf(stdout, NULL, _IONBF, 0);
     Server server;
-    int32_t err = server_boot(&server);
+    auto str = STRING_VIEW_CSTR("Hello in 3DHook application!");
+    string_view_fprintf(stdout, &str);
+    printf("\n");
+    s32 err = server_boot(&server);
     if (err)
     {
         printf("Error\n");

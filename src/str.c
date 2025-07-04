@@ -325,3 +325,13 @@ void string_tokenizer_reset(str_tokenizer_t tokenizer[static 1])
     tokenizer->current_index = 0;
     tokenizer->valid = true;
 }
+
+void string_fprintf(FILE *stream, const str_t string[static 1])
+{
+    printf("%.*s", (int)string->size, string->data);
+}
+
+void string_view_fprintf(FILE *stream, const str_view_t string[static 1])
+{
+    printf("%.*s", (int)string->size, string->data);
+}
