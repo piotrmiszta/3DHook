@@ -6,29 +6,31 @@
 
 #define STRING_NOT_FOUND -101
 
-typedef struct str_t {
-    char* data;
+typedef struct str_t
+{
+    char *data;
     u64 size;
     u64 capacity;
     bool valid;
-}str_t;
+} str_t;
 
-typedef struct str_view_t {
-    const char* data;
+typedef struct str_view_t
+{
+    const char *data;
     u64 size;
     bool valid;
-}str_view_t;
+} str_view_t;
 
-typedef struct str_tokenizer_t {
-    const str_view_t* string;
-    const str_view_t* delims;
+typedef struct str_tokenizer_t
+{
+    const str_view_t *string;
+    const str_view_t *delims;
     u64 current_index;
     bool valid;
-}str_tokenizer_t;
+} str_tokenizer_t;
 
-void string_register_allocator(void* (*str_alloc)(u64 size),
-                               void* (*str_realloc)(void* ptr, u64 size),
-                               void (*str_free)(void* ptr));
+void string_register_allocator(void *(*str_alloc)(u64 size), void *(*str_realloc)(void *ptr, u64 size),
+                               void (*str_free)(void *ptr));
 void string_reset_allocator(void);
 bool string_is_default_allocator(void);
 
@@ -38,13 +40,12 @@ str_t string_create_from_buff(u64 size, const char buffer[static size]);
 str_t string_copy(const str_t string[static 1]);
 void string_free(str_t string[static 1]);
 
-
 bool string_join(str_t dest[static 1], const str_t src[static 1]);
 void string_to_upper(str_t string[static 1]);
 void string_to_lower(str_t string[static 1]);
 
 bool string_equal(const str_t a[static 1], const str_t b[static 1]);
-bool string_equal_cstr(const str_t a[static 1], const char* cstr, u64 len);
+bool string_equal_cstr(const str_t a[static 1], const char *cstr, u64 len);
 
 s64 string_find(const str_t string[static 1], char ch);
 s64 string_substr(const str_t string[static 1], const str_t substr[static 1]);

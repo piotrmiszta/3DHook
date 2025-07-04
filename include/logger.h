@@ -10,22 +10,18 @@
 #define YELLOW "\033[1;33m"
 #define RESET "\x1B[0m"
 
-#define log(stream, file, line, level, ...)                     \
-    do {                                                        \
-        fprintf(stream, "%s %s:%d ", level, file, line);        \
-        fprintf(stream, __VA_ARGS__);                           \
-        fprintf(stream, "\n");                                  \
+#define log(stream, file, line, level, ...)                                                                            \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        fprintf(stream, "%s %s:%d ", level, file, line);                                                               \
+        fprintf(stream, __VA_ARGS__);                                                                                  \
+        fprintf(stream, "\n");                                                                                         \
     } while (0)
 
-#define log_debug(...)                                          \
-    log(stdout, __FILE__, __LINE__, BLUE"[DEBUG]"RESET, __VA_ARGS__)
-#define log_error(...)                                          \
-    log(stdout, __FILE__, __LINE__, RED"[ERROR]"RESET, __VA_ARGS__)
-#define log_warning(...)                                        \
-    log(stdout, __FILE__, __LINE__, YELLOW"[WARNING]"RESET, __VA_ARGS__)
-#define log_info(...)                                           \
-    log(stdout, __FILE__, __LINE__, GREEN"[INFO]"RESET, __VA_ARGS__)
-#define log_trace(...)                                          \
-    log(stdout, __FILE__, __LINE__, CYAN"[TRACE]"RESET, __VA_ARGS__)
+#define log_debug(...) log(stdout, __FILE__, __LINE__, BLUE "[DEBUG]" RESET, __VA_ARGS__)
+#define log_error(...) log(stdout, __FILE__, __LINE__, RED "[ERROR]" RESET, __VA_ARGS__)
+#define log_warning(...) log(stdout, __FILE__, __LINE__, YELLOW "[WARNING]" RESET, __VA_ARGS__)
+#define log_info(...) log(stdout, __FILE__, __LINE__, GREEN "[INFO]" RESET, __VA_ARGS__)
+#define log_trace(...) log(stdout, __FILE__, __LINE__, CYAN "[TRACE]" RESET, __VA_ARGS__)
 
 #endif

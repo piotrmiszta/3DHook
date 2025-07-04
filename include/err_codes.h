@@ -1,11 +1,11 @@
 #ifndef ERR_CODES_H_
 #define ERR_CODES_H_
 
+#include <errno.h>
 #include <stdint.h>
 #include <string.h>
-#include <errno.h>
 
-#define ASSERT(cond, msg) assert(cond && msg)
+#define ASSERT(cond, msg) assert(cond &&msg)
 #define error() strerror(errno)
 
 typedef int32_t err_t;
