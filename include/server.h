@@ -11,7 +11,7 @@ typedef struct Server
     int32_t socket;
     struct sockaddr_in addr;
     pthread_t thread;
-}Server;
+} Server;
 
 [[nodiscard("Function can fail, depend on platform")]]
 err_t server_boot(Server server[static 1]);
