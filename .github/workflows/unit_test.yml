@@ -1,4 +1,4 @@
-name: Build and Test with CMake
+name: Basic unit tests
 
 on:
   push:
@@ -16,8 +16,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y build-essential cmake libcmocka-dev
+      - name: Install clang-19 and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main"
+          sudo apt-get update
+          sudo apt-get install -y clang-19 libcmocka-dev build-essential cmake
+
+      - name: Set environment variables for clang-19
+        run: |
+          echo "CC=/usr/bin/clang-19" >> $GITHUB_ENV
+          echo "CXX=/usr/bin/clang++-19" >> $GITHUB_ENV
 
       - name: Configure CMake
         run: cmake -S . -B build
