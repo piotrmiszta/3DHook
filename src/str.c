@@ -219,11 +219,6 @@ str_view_t string_view_create_from_string(const str_t string[static 1])
     }
 }
 
-str_view_t string_view_create_from_cstr(const char data[static 1], u64 size)
-{
-    return (str_view_t){data, size, true};
-}
-
 bool string_view_equal(const str_view_t a[static 1],
                        const str_view_t b[static 1])
 {

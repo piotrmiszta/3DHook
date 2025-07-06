@@ -11,12 +11,14 @@ enum HttpVersionE
     HTTP_VERSION_1_1,
     HTTP_VERSION_2,
     HTTP_VERSION_3,
+    HTTP_VERSION_UNKNOWN,
 };
 
 enum HttpMethodE
 {
     HTTP_METHOD_GET = 0,
     HTTP_METHOD_POST,
+    HTTP_METHOD_UNKNOWN,
 };
 
 typedef struct HttpHeaderElement
