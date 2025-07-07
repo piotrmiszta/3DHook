@@ -9,6 +9,7 @@ add_library(http_server_lib STATIC
 			    src/http_parser.c
 			    src/str.c)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 target_include_directories(http_server_lib PUBLIC include/)
 

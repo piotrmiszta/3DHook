@@ -59,15 +59,24 @@ s64 string_substr(const str_t string[static 1], const str_t substr[static 1]);
 u64 string_replace(str_t string[static 1], char ch, char val);
 
 str_view_t string_view_create_from_string(const str_t string[static 1]);
+str_view_t string_view_copy(const str_view_t string[static 1]);
+
 bool string_view_equal(const str_view_t a[static 1],
                        const str_view_t b[static 1]);
 s64 string_view_find(const str_t string[static 1], char ch);
 s64 string_view_substr(const str_t string[static 1],
                        const str_t substr[static 1]);
 
+void string_view_remove_trailing_whitespaces(str_view_t string[static 1]);
+void string_view_remove_leading_whitespaces(str_view_t string[static 1]);
+void string_view_remove_whitespaces(str_view_t string[static 1]);
+
+bool string_view_is_whitespaces(const str_view_t string[static 1]);
+
 str_tokenizer_t string_tokenizer_init(const str_view_t string[static 1],
                                       const str_view_t delims[static 1]);
 str_view_t string_tokenizer_next(str_tokenizer_t tokenizer[static 1]);
+str_view_t string_tokenizer_rest(str_tokenizer_t tokenizer[static 1]);
 void string_tokenizer_reset(str_tokenizer_t tokenizer[static 1]);
 
 void string_fprintf(FILE *stream, const str_t string[static 1]);

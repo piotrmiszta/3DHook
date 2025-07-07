@@ -80,6 +80,9 @@ static void test_tokenizer(void **state)
     assert_int_equal(string_view_equal(&str, &this), true);
     str = string_tokenizer_next(&token);
     this = STRING_VIEW_CSTR("string");
+    auto rest = string_tokenizer_rest(&token);
+    auto expected = STRING_VIEW_CSTR("with-multiple:delims");
+    assert_int_equal(string_view_equal(&rest, &expected), true);
     assert_int_equal(string_view_equal(&str, &this), true);
     str = string_tokenizer_next(&token);
     this = STRING_VIEW_CSTR("with");
@@ -97,6 +100,25 @@ static void test_tokenizer(void **state)
     assert_int_equal(str.valid, false);
 }
 
+void test_remove_whitespaces(void **state)
+{
+    auto ref = STRING_VIEW_CSTR("  Test removing whitespaces  ");
+    auto leading = string_view_copy(&ref);
+    auto trailing = string_view_copy(&ref);
+    auto both = string_view_copy(&ref);
+    auto expected_both = STRING_VIEW_CSTR("Test removing whitespaces");
+    auto expected_trailing = STRING_VIEW_CSTR("  Test removing whitespaces");
+    auto expected_leading = STRING_VIEW_CSTR("Test removing whitespaces  ");
+
+    string_view_remove_leading_whitespaces(&leading);
+    string_view_remove_trailing_whitespaces(&trailing);
+    string_view_remove_whitespaces(&both);
+    string_view_fprintf(stdout, &trailing);
+    assert_true(string_view_equal(&leading, &expected_leading));
+    assert_true(string_view_equal(&trailing, &expected_trailing));
+    assert_true(string_view_equal(&both, &expected_both));
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -106,6 +128,7 @@ int main(void)
         cmocka_unit_test(test_string_find),
         cmocka_unit_test(test_string_find_substr),
         cmocka_unit_test(test_tokenizer),
+        cmocka_unit_test(test_remove_whitespaces),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
