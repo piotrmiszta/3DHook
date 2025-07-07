@@ -21,14 +21,17 @@ static enum HttpMethodE http_get_method_from_string(str_view_t string);
 
 err_t http_message_parse(HttpMessage message[static 1], str_t buff)
 {
+    /* TODO:  Current implementation require go two times for all message
+     one to split by lines, and second by splitting key:value, refactor this
+     to do only one traversal for whole string */
     message->message_buffer = buff;
     str_view_t buffer = string_view_create_from_string(&buff);
-    str_view_t delims = STRING_VIEW_CSTR("\n:");
+    str_view_t delims = STRING_VIEW_CSTR("\n");
     str_tokenizer_t tokenizer = string_tokenizer_init(&buffer, &delims);
-    str_view_t first_line = string_tokenizer_next(&tokenizer);
+    str_view_t line = string_tokenizer_next(&tokenizer);
 
     auto tokenizer_first_line =
-        string_tokenizer_init(&first_line, &STRING_VIEW_CSTR(" "));
+        string_tokenizer_init(&line, &STRING_VIEW_CSTR(" "));
 
     str_view_t method = string_tokenizer_next(&tokenizer_first_line);
     str_view_t url = string_tokenizer_next(&tokenizer_first_line);
@@ -41,12 +44,15 @@ err_t http_message_parse(HttpMessage message[static 1], str_t buff)
     message->elements_count = 0;
     while (true)
     {
-        str_view_t key = string_tokenizer_next(&tokenizer);
-        if (key.data == nullptr)
+        line = string_tokenizer_next(&tokenizer);
+        if (line.data == nullptr)
         {
             break;
         }
-        str_view_t value = string_tokenizer_next(&tokenizer);
+        auto tokenizer_splitter =
+            string_tokenizer_init(&line, &STRING_VIEW_CSTR(":"));
+        str_view_t key = string_tokenizer_next(&tokenizer_splitter);
+        str_view_t value = string_tokenizer_rest(&tokenizer_splitter);
         string_view_remove_whitespaces(&key);
         string_view_remove_whitespaces(&value);
         HttpHeaderElement el = {.key = key, .value = value};
