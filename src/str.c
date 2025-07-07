@@ -219,11 +219,6 @@ str_view_t string_view_create_from_string(const str_t string[static 1])
     }
 }
 
-str_view_t string_view_create_from_cstr(const char data[static 1], u64 size)
-{
-    return (str_view_t){data, size, true};
-}
-
 bool string_view_equal(const str_view_t a[static 1],
                        const str_view_t b[static 1])
 {
@@ -320,6 +315,21 @@ str_view_t string_tokenizer_next(str_tokenizer_t tokenizer[static 1])
     return (str_view_t){nullptr, 0, false};
 }
 
+str_view_t string_tokenizer_rest(str_tokenizer_t tokenizer[static 1])
+{
+    if (!tokenizer->valid)
+    {
+        return (str_view_t){nullptr, 0, 0};
+    }
+    if (tokenizer->current_index == tokenizer->string->size)
+    {
+        return (str_view_t){nullptr, 0, 0};
+    }
+    return (str_view_t){
+        &tokenizer->string->data[tokenizer->current_index + 1],
+        tokenizer->string->size - (tokenizer->current_index + 1), true};
+}
+
 void string_tokenizer_reset(str_tokenizer_t tokenizer[static 1])
 {
     tokenizer->current_index = 0;
@@ -334,4 +344,82 @@ void string_fprintf(FILE *stream, const str_t string[static 1])
 void string_view_fprintf(FILE *stream, const str_view_t string[static 1])
 {
     printf("%.*s", (int)string->size, string->data);
+}
+
+void string_view_remove_trailing_whitespaces(str_view_t string[static 1])
+{
+    u64 no_trailing_whitespaces = 0;
+    for (u64 i = string->size - 1; i >= 0; i--)
+    {
+        switch (string->data[i])
+        {
+        case '\n':
+        case ' ':
+        case '\r':
+        case '\t':
+            no_trailing_whitespaces++;
+            break;
+        default:
+            string->size -= no_trailing_whitespaces;
+            return;
+        }
+    }
+}
+
+void string_view_remove_leading_whitespaces(str_view_t string[static 1])
+{
+    u64 no_whitespaces = 0;
+    for (u64 i = 0; i < string->size; i++)
+    {
+
+        switch (string->data[i])
+        {
+        case '\n':
+        case ' ':
+        case '\r':
+        case '\t':
+            no_whitespaces++;
+            break;
+        default:
+            string->size -= no_whitespaces;
+            if (string->size == 0)
+            {
+                string->data = nullptr;
+            }
+            else
+            {
+                string->data += no_whitespaces;
+            }
+            return;
+        }
+    }
+}
+
+void string_view_remove_whitespaces(str_view_t string[static 1])
+{
+    string_view_remove_leading_whitespaces(string);
+    string_view_remove_trailing_whitespaces(string);
+}
+
+bool string_view_is_whitespaces(const str_view_t string[static 1])
+{
+    for (u64 i = 0; i < string->size; i++)
+    {
+        switch (string->data[i])
+        {
+        case '\n':
+        case ' ':
+        case '\r':
+        case '\t':
+            break;
+        default:
+            return false;
+        }
+    }
+    return true;
+}
+
+str_view_t string_view_copy(const str_view_t string[static 1])
+{
+    return (str_view_t){string->data, string->size, string->valid};
 }

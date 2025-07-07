@@ -6,8 +6,10 @@ set (CMAKE_C_FLAGS "-std=c2x -ggdb3 -Wall -pedantic -Werror")
 
 add_library(http_server_lib STATIC
 			    src/server.c
+			    src/http_parser.c
 			    src/str.c)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 target_include_directories(http_server_lib PUBLIC include/)
 

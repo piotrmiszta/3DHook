@@ -6,7 +6,7 @@ int main(int, char **)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
     Server server;
-    auto str = STRING_VIEW_CSTR("Hello in 3DHook application!");
+    str_view_t str = STRING_VIEW_CSTR("Hello in 3DHook application!");
     string_view_fprintf(stdout, &str);
     printf("\n");
     s32 err = server_boot(&server);
