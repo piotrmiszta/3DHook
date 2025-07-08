@@ -9,8 +9,10 @@
 #include <cmocka.h>
 // clang-format on
 
+#include "err_codes.h"
 #include "http_parser.h"
 #include "str.h"
+#include "worker.h"
 
 static void test_parsing_first_line(void **state)
 {
