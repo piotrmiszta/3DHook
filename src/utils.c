@@ -10,7 +10,6 @@
 #include "err.h"
 #include "utils.h"
 #include <stdio.h>
-
 constexpr u64 max_filename_len = 255;
 constexpr u64 max_mode_len = 4;
 
