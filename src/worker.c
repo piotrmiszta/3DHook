@@ -35,15 +35,8 @@ static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
     {
         return EMEMORY;
     }
-    FILE *file = file_open(path, STRING_VIEW_CSTR("r"));
-    if (file == nullptr)
-    {
-        return EFILE;
-    }
-    u64 file_len = get_file_len(file);
-    *result = string_create_with_size(file_len);
-    // TODO: add assert
-    fread(result->data, sizeof(char), result->size, file);
+    *result = get_file_to_memory(path);
 
+    string_fprintf(stdout, result);
     return SUCCESS;
 }
