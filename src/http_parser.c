@@ -44,10 +44,17 @@ err_t http_message_parse(HttpMessage message[static 1], str_t buff)
     message->elements_count = 0;
     while (true)
     {
+
         line = string_tokenizer_next(&tokenizer);
+
         if (line.data == nullptr)
         {
             break;
+        }
+        string_view_remove_whitespaces(&line);
+        if (line.size == 0)
+        {
+            continue;
         }
         auto tokenizer_splitter =
             string_tokenizer_init(&line, &STRING_VIEW_CSTR(":"));

@@ -16,7 +16,7 @@ constexpr err_t EGENRIC = -1;
 constexpr err_t EMEMORY = -2;
 constexpr err_t ESOCKET = -3;
 constexpr err_t EFILE = -4;
-
+constexpr err_t ESYS = -5;
 constexpr err_t EHTTP_METHOD = -1001;
 
 #endif

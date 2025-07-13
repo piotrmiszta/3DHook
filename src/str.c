@@ -106,6 +106,7 @@ bool string_join(str_t dest[static 1], const str_t src[static 1])
         }
     }
     memcpy(&dest->data[dest->size], src->data, src->size);
+    dest->size = result_size;
     return true;
 }
 
@@ -359,6 +360,8 @@ void string_view_fprintf(FILE *stream, const str_view_t string[static 1])
 
 void string_view_remove_trailing_whitespaces(str_view_t string[static 1])
 {
+    if (string->size == 0)
+        return;
     u64 no_trailing_whitespaces = 0;
     for (u64 i = string->size - 1; i >= 0; i--)
     {
@@ -371,7 +374,14 @@ void string_view_remove_trailing_whitespaces(str_view_t string[static 1])
             no_trailing_whitespaces++;
             break;
         default:
-            string->size -= no_trailing_whitespaces;
+            if (string->size < no_trailing_whitespaces)
+            {
+                string->size = 0;
+            }
+            else
+            {
+                string->size -= no_trailing_whitespaces;
+            }
             return;
         }
     }

@@ -4,8 +4,11 @@
 #include <unistd.h>
 
 #include "err_codes.h"
+#include "http_parser.h"
 #include "logger.h"
 #include "server.h"
+#include "str.h"
+#include "worker.h"
 
 constexpr int32_t port = 8080;
 
@@ -73,10 +76,24 @@ static void *server_thread(void *arg)
     }
     log_info("Accepted client= %d", client_fd);
 
+    int writed = 0;
     while (1)
     {
         char buffer[1024] = {};
-        read(client_fd, buffer, 1024);
-        printf("Readed message = %s", buffer);
+        ssize_t readed = read(client_fd, buffer, 1024);
+        HttpMessage msg;
+        str_t message = string_create_from_buff(readed - 1, buffer);
+        http_message_parse(&msg, message);
+        str_t response;
+        worker_process(&msg, client_fd, &response);
+        printf("Sending: ");
+        string_fprintf(stdout, &response);
+        printf("\n");
+        if (writed == 0)
+        {
+            write(client_fd, response.data, response.size);
+            write(client_fd, "\0", 1);
+            writed = 1;
+        }
     }
 }

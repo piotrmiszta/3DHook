@@ -1,7 +1,9 @@
+#include "err_codes.h"
 #include "str.h"
 #ifdef __unix__
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
@@ -65,4 +67,32 @@ str_t get_file_to_memory(str_view_t path)
     munmap(file_buffer, size);
     close(fd);
     return ret;
+}
+
+err_t send_file_to_user(str_view_t path, s32 client_fd)
+{
+    char filename[max_filename_len] = {0};
+    if (string_view_to_cstr(&path, filename, max_filename_len - 1) == false)
+    {
+        return EMEMORY;
+    }
+
+    s32 fd = open(filename, O_RDONLY);
+    if (fd < 0)
+    {
+        return ESOCKET;
+    }
+
+    struct stat stats;
+    if (fstat(fd, &stats) < 0)
+    {
+        return ESYS;
+    }
+
+    auto sended = sendfile(client_fd, fd, 0, stats.st_size);
+    if (sended != stats.st_size)
+    {
+        return ESYS;
+    }
+    return SUCCESS;
 }
