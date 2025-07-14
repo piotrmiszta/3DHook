@@ -96,16 +96,18 @@ static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
     {
         return EMEMORY;
     }
-    *result = string_create_from_cstr("HTTP/1.1 200 OK\n"
-                                      "Content-Type: text/html\n"
-                                      "Content-Length: 95\n\n"
-                                      "<!DOCTYPE html>\n"
-                                      "<html>\n"
-                                      "<body>\n"
-                                      "<h1>My First Heading</h1>\n"
-                                      "<p>My first paragraph.</p>\n"
-                                      "</body>\n"
-                                      "</html>\n");
+
+    str_t response_header =
+        string_create_from_cstr("HTTP/1.1 200 OK\n"
+                                "Content-Type: text/html\n");
+    str_t file = get_file_to_memory(path);
+    char content_len[100];
+    sprintf(content_len, "Content-Length: %lu\n\n", file.size);
+    str_t con_len = string_create_from_buff(strlen(content_len), content_len);
+    string_join(&response_header, &con_len);
+    string_join(&response_header, &file);
+
+    *result = response_header;
     if (result->data == nullptr)
     {
         log_error("Cannot allocate memory for result message to client %d",
@@ -113,6 +115,8 @@ static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
         return EMEMORY;
     }
     string_fprintf(stdout, result);
+    string_free(&file);
+    string_free(&con_len);
     return SUCCESS;
 }
 
