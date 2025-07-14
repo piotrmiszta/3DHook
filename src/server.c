@@ -296,7 +296,9 @@ static err_t server_read(Client *client)
         return EGENRIC;
     }
     str_t message = string_create_from_buff(readed - 1, buffer);
+    pthread_mutex_lock(&client->mtx);
     client->message = message;
+    pthread_mutex_unlock(&client->mtx);
     worker_add_request(client);
     string_fprintf(stdout, &message);
     return SUCCESS;
@@ -304,8 +306,11 @@ static err_t server_read(Client *client)
 
 static err_t server_write(Client *client)
 {
+    pthread_mutex_lock(&client->mtx);
     write(client->socket, client->reponse.data, client->reponse.size);
+    client->response_ready = false;
     string_free(&client->reponse);
+    pthread_mutex_unlock(&client->mtx);
     return SUCCESS;
 }
 
