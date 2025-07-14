@@ -37,7 +37,7 @@ err_t server_boot(Server server[restrict static 1])
     int32_t fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd <= 0)
     {
-        log_error("Can't create socket! %s", error());
+        log_error("Can't create socket! %s\n", error());
         return ESOCKET;
     }
 
@@ -50,19 +50,19 @@ err_t server_boot(Server server[restrict static 1])
     int32_t opt = 1;
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
     {
-        log_error("Cannot apply options to socket! %s", error());
+        log_error("Cannot apply options to socket! %s\n", error());
         return ESOCKET;
     }
 
     if (bind(fd, (struct sockaddr *)&addr, len) < 0)
     {
-        log_error("Error when binding socket %s", error());
+        log_error("Error when binding socket %s\n", error());
         return ESOCKET;
     }
 
     if (listen(fd, (int)3) < 0)
     {
-        log_error("Error when listening! %s", error());
+        log_error("Error when listening! %s\n", error());
         return ESOCKET;
     }
 
@@ -72,7 +72,7 @@ err_t server_boot(Server server[restrict static 1])
 
     if (pthread_create(&server->thread, nullptr, server_thread, server) < 0)
     {
-        log_error("Cannot create thread for server %s", error());
+        log_error("Cannot create thread for server %s\n", error());
         return ESOCKET;
     }
     return SUCCESS;
@@ -82,7 +82,7 @@ static void *server_thread(void *arg)
 {
     if (arg == nullptr)
     {
-        log_error("pointer passed to server_thread is nullptr!");
+        log_error("pointer passed to server_thread is nullptr!\n");
         return nullptr;
     }
 
@@ -102,7 +102,7 @@ static void *server_thread(void *arg)
 static err_t server_set_noblock(s32 fd)
 {
     s32 flags = fcntl(fd, F_GETFL, 0);
-    ASSERT(flags >= 0, "Cannot get flags from FD"); // TODO: error handling
+    ASSERT(flags >= 0, "Cannot get flags from FD\n"); // TODO: error handling
     flags |= O_NONBLOCK;
     auto res = fcntl(fd, F_SETFL, flags);
     ASSERT(res >= 0, "Cannot set flags for FD");
@@ -115,7 +115,7 @@ static err_t server_add_event(s32 epoll, s32 fd, u32 state)
     ev.data.fd = fd;
     ev.events = state;
     auto res = epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &ev);
-    ASSERT(res >= 0, "Cannot add event for FD");
+    ASSERT(res >= 0, "Cannot add event for FD\n");
     return SUCCESS;
 }
 
@@ -127,7 +127,7 @@ static err_t server_accept_client(s32 epoll, Server *server)
     client->socket =
         accept(server->socket, (struct sockaddr *)&client->addr, &len);
     ASSERT(client->socket > 0, "Cannot accept client!");
-    log_trace("Accepted new client %d", client->socket);
+    log_trace("Accepted new client %d\n", client->socket);
     pthread_mutex_init(&client->mtx, NULL);
     list_add_tail(&client->list, &server->clients);
     server_add_event(epoll, client->socket, EPOLLIN);
@@ -137,7 +137,7 @@ static err_t server_accept_client(s32 epoll, Server *server)
 static err_t server_remove_client(Client *client)
 {
     list_rem_entry(&client->list);
-    log_trace("Disconnected client: %d", client->socket);
+    log_trace("Disconnected client: %d\n", client->socket);
     free(client);
     return SUCCESS;
 }
@@ -156,7 +156,7 @@ static err_t server_read(Client *client)
     client->message = message;
     pthread_mutex_unlock(&client->mtx);
     worker_add_request(client);
-    log_debug("Writed message to client %d", client->socket);
+    log_trace("Readed message from client %d\n", client->socket);
     return SUCCESS;
 }
 
@@ -167,7 +167,7 @@ static err_t server_write(Client *client)
     client->response_ready = false;
     string_free(&client->reponse);
     pthread_mutex_unlock(&client->mtx);
-    log_debug("Writed message to client %d", client->socket);
+    log_trace("Sending message to client %d\n", client->socket);
     return SUCCESS;
 }
 

@@ -36,8 +36,10 @@ err_t http_message_parse(HttpMessage message[static 1], str_t buff)
     str_view_t method = string_tokenizer_next(&tokenizer_first_line);
     str_view_t url = string_tokenizer_next(&tokenizer_first_line);
     str_view_t version = string_tokenizer_next(&tokenizer_first_line);
+
     message->version = http_get_version_from_string(version);
     message->method = http_get_method_from_string(method);
+
     message->url = url;
 
     HttpHeaderElement elements[max_header_elements];

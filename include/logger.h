@@ -15,7 +15,6 @@
     {                                                                          \
         fprintf(stream, "%s %s:%d ", level, file, line);                       \
         fprintf(stream, __VA_ARGS__);                                          \
-        fprintf(stream, "\n");                                                 \
     } while (0)
 
 #define log_debug(...)                                                         \
