@@ -64,6 +64,17 @@ str_t string_create_from_buff(u64 size, const char buffer[static size])
     return (str_t){data, size, size, true};
 }
 
+str_t string_from_str_view(const str_view_t string[static 1])
+{
+    char *data = internal_alloc(string->size * sizeof(char));
+    if (data == nullptr)
+    {
+        return (str_t){nullptr, 0, 0, false};
+    }
+    data = memcpy(data, string->data, string->size * sizeof(char));
+    return (str_t){data, string->size, string->size, true};
+}
+
 str_t string_copy(const str_t string[static 1])
 {
     u64 size = string->size;
@@ -81,6 +92,10 @@ str_t string_copy(const str_t string[static 1])
 void string_free(str_t string[static 1])
 {
     internal_free(string->data);
+    string->data = nullptr;
+    string->size = 0;
+    string->capacity = 0;
+    string->valid = false;
 }
 
 bool string_join(str_t dest[static 1], const str_t src[static 1])
@@ -95,6 +110,7 @@ bool string_join(str_t dest[static 1], const str_t src[static 1])
         }
     }
     memcpy(&dest->data[dest->size], src->data, src->size);
+    dest->size = result_size;
     return true;
 }
 
@@ -348,6 +364,8 @@ void string_view_fprintf(FILE *stream, const str_view_t string[static 1])
 
 void string_view_remove_trailing_whitespaces(str_view_t string[static 1])
 {
+    if (string->size == 0)
+        return;
     u64 no_trailing_whitespaces = 0;
     for (u64 i = string->size - 1; i >= 0; i--)
     {
@@ -360,7 +378,14 @@ void string_view_remove_trailing_whitespaces(str_view_t string[static 1])
             no_trailing_whitespaces++;
             break;
         default:
-            string->size -= no_trailing_whitespaces;
+            if (string->size < no_trailing_whitespaces)
+            {
+                string->size = 0;
+            }
+            else
+            {
+                string->size -= no_trailing_whitespaces;
+            }
             return;
         }
     }
@@ -422,4 +447,32 @@ bool string_view_is_whitespaces(const str_view_t string[static 1])
 str_view_t string_view_copy(const str_view_t string[static 1])
 {
     return (str_view_t){string->data, string->size, string->valid};
+}
+
+/* NOTE: experimental function to avoid memory allocation for local string
+   creation probably after implementing allocator can be removed */
+
+str_view_t string_view_join(const str_view_t str[static 1],
+                            const str_view_t str2[static 1],
+                            char buffer[static 1], u64 buffer_len)
+{
+    u64 size = str->size + str2->size;
+    if (buffer_len < size)
+    {
+        return (str_view_t){0};
+    }
+    memcpy(buffer, str->data, str->size);
+    memcpy(&buffer[str->size], str2->data, str2->size);
+    return (str_view_t){buffer, size, true};
+}
+
+bool string_view_to_cstr(const str_view_t str[static 1], char buffer[static 1],
+                         u64 len)
+{
+    if (str->size > len)
+    {
+        return false;
+    }
+    memcpy(buffer, str->data, str->size);
+    return true;
 }

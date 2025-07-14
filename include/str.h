@@ -40,6 +40,7 @@ str_t string_create_with_size(u64 size);
 str_t string_create_from_buff(u64 size, const char buffer[static size]);
 str_t string_create_from_cstr(const char cst[static 1]);
 str_t string_copy(const str_t string[static 1]);
+str_t string_from_str_view(const str_view_t string[static 1]);
 void string_free(str_t string[static 1]);
 
 bool string_join(str_t dest[static 1], const str_t src[static 1]);
@@ -81,6 +82,13 @@ void string_tokenizer_reset(str_tokenizer_t tokenizer[static 1]);
 
 void string_fprintf(FILE *stream, const str_t string[static 1]);
 void string_view_fprintf(FILE *stream, const str_view_t string[static 1]);
+
+str_view_t string_view_join(const str_view_t str[static 1],
+                            const str_view_t str2[static 1],
+                            char buffer[static 1], u64 buffer_len);
+
+bool string_view_to_cstr(const str_view_t str[static 1], char buffer[static 1],
+                         u64 len);
 
 #define string_view_create_from_cstr(cstr, size)                               \
     {                                                                          \

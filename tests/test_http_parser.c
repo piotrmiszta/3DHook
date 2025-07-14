@@ -9,8 +9,10 @@
 #include <cmocka.h>
 // clang-format on
 
+#include "err_codes.h"
 #include "http_parser.h"
 #include "str.h"
+#include "worker.h"
 
 static void test_parsing_first_line(void **state)
 {
@@ -94,6 +96,8 @@ static void test_http_parser_real_get_message(void **state)
     assert_int_equal(msg.method, HTTP_METHOD_GET);
     assert_int_equal(msg.version, HTTP_VERSION_1_1);
     assert_int_equal(msg.elements_count, 11);
+    str_t string;
+    worker_process(&msg, 0, &string);
 }
 
 int main(void)

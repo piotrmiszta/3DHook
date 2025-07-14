@@ -38,5 +38,5 @@ typedef struct HttpMessage
 } HttpMessage;
 
 err_t http_message_parse(HttpMessage message[static 1], str_t buff);
-
+err_t http_message_free(HttpMessage message[static 1]);
 #endif

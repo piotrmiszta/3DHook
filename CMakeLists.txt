@@ -6,6 +6,8 @@ set (CMAKE_C_FLAGS "-std=c2x -ggdb3 -Wall -pedantic -Werror")
 
 add_library(http_server_lib STATIC
 			    src/server.c
+			    src/utils.c
+			    src/worker.c
 			    src/http_parser.c
 			    src/str.c)
 
@@ -25,3 +27,4 @@ find_package(cmocka 1.1.0 REQUIRED)
 include (${CMAKE_SOURCE_DIR}/cmake/AddCMockaTest.cmake)
 
 add_subdirectory(tests)
+
