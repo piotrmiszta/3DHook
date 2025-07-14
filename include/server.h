@@ -5,12 +5,26 @@
 #include <pthread.h>
 
 #include "err_codes.h"
+#include "list.h"
+#include "str.h"
+#include "types.h"
+
+typedef struct Client
+{
+    s32 socket;
+    struct sockaddr_in addr;
+    list_t list;
+    str_t message;
+    str_t reponse;
+    volatile bool response_ready;
+} Client;
 
 typedef struct Server
 {
-    int32_t socket;
+    s32 socket;
     struct sockaddr_in addr;
     pthread_t thread;
+    list_t clients;
 } Server;
 
 [[nodiscard("Function can fail, depend on platform")]]
