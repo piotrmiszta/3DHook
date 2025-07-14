@@ -311,6 +311,7 @@ static err_t server_write(Client *client)
     client->response_ready = false;
     string_free(&client->reponse);
     pthread_mutex_unlock(&client->mtx);
+    log_debug("Writed message to client %d", client->socket);
     return SUCCESS;
 }
 
@@ -330,18 +331,18 @@ static err_t server_handle_events(s32 epoll, struct epoll_event *events,
             Client *c = NULL;
             while (list != &server->clients)
             {
-                c = list_get_ptr(list, Client, list);
-                if (c->socket == fd)
+                Client *f = list_get_ptr(list, Client, list);
+                if (f->socket == fd)
                 {
-                    log_debug("found client %d", c->socket);
+                    c = f;
                     break;
                 }
-
                 list = list->next;
             }
+            ASSERT(c != nullptr,
+                   "Client not found in list, but was in epoll!!");
             if (events[i].events & EPOLLIN)
             {
-                log_debug("server read");
                 if (server_read(c) == EGENRIC)
                 {
                     epoll_ctl(epoll, EPOLL_CTL_DEL, fd, NULL);
@@ -356,7 +357,6 @@ static err_t server_handle_events(s32 epoll, struct epoll_event *events,
             }
             else if (events[i].events & EPOLLOUT && c->response_ready)
             {
-                log_debug("server write");
                 server_write(c);
                 struct epoll_event ev;
                 ev.events = EPOLLIN;
