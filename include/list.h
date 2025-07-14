@@ -41,8 +41,10 @@ static inline void list_add_tail(list_t entry[static 1], list_t head[static 1])
 static inline void list_rem_entry(list_t entry[static 1])
 {
     list_t *temp = entry->prev;
-    entry->prev = entry->next;
-    entry->next = temp;
+    entry->prev->next = entry->next;
+    entry->next->prev = temp;
+    entry->next = nullptr;
+    entry->prev = nullptr;
 }
 
 #endif

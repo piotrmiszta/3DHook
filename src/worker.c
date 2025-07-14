@@ -11,6 +11,7 @@
 #include <string.h>
 
 constexpr u32 max_clients_in_que = 10;
+static volatile bool worker_run = false;
 
 typedef struct WorkerState
 {
@@ -29,6 +30,7 @@ static void *worker_thread(void *);
 
 err_t worker_boot(void)
 {
+    worker_run = true;
     state.add_index = 0;
     state.get_index = 0;
     pthread_mutex_init(&state.mtx, NULL);
@@ -95,19 +97,20 @@ static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
         return EMEMORY;
     }
     *result = string_create_from_cstr("HTTP/1.1 200 OK\n"
-                                      "Content-Type: text/html\n");
-    str_t file = get_file_to_memory(path);
-    char content_len[100];
-    snprintf(content_len, 100, "Content-Length: %lu\n\n", file.size);
-    str_t content = string_create_from_buff(
-        strlen(content_len),
-        content_len); // TODO: remove this, replace with string_lib
-    string_join(result, &content);
-    string_join(result, &file);
-
+                                      "Content-Type: text/html\n"
+                                      "Content-Length: 95\n\n"
+                                      "<!DOCTYPE html>\n"
+                                      "<html>\n"
+                                      "<body>\n"
+                                      "<h1>My First Heading</h1>\n"
+                                      "<p>My first paragraph.</p>\n"
+                                      "</body>\n"
+                                      "</html>\n");
     if (result->data == nullptr)
     {
-        printf("Error!!\n");
+        log_error("Cannot allocate memory for result message to client %d",
+                  client_fd);
+        return EMEMORY;
     }
     string_fprintf(stdout, result);
     return SUCCESS;
@@ -115,10 +118,14 @@ static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
 
 static void *worker_thread(void *)
 {
-    while (true)
+    while (1)
     {
         // TODO: add returning from this func
         sem_wait(&state.que_full);
+        if (worker_run == false)
+        {
+            return NULL;
+        }
         pthread_mutex_lock(&state.mtx);
         Client *req = state.que[state.get_index];
         state.get_index++;
@@ -131,8 +138,23 @@ static void *worker_thread(void *)
         log_debug("Popped client from que");
         HttpMessage msg;
         http_message_parse(&msg, req->message);
+        if (req->reponse.data)
+        {
+            string_free(&req->reponse);
+            req->reponse.data = nullptr;
+            req->reponse.size = 0;
+            req->reponse.capacity = 0;
+        }
         worker_process(&msg, req->socket, &req->reponse);
         req->response_ready = true;
+        http_message_free(&msg);
     }
     return NULL;
+}
+
+void worker_close(void)
+{
+    worker_run = false;
+    sem_post(&state.que_full);
+    pthread_join(state.thread, NULL);
 }

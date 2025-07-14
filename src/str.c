@@ -92,6 +92,10 @@ str_t string_copy(const str_t string[static 1])
 void string_free(str_t string[static 1])
 {
     internal_free(string->data);
+    string->data = nullptr;
+    string->size = 0;
+    string->capacity = 0;
+    string->valid = false;
 }
 
 bool string_join(str_t dest[static 1], const str_t src[static 1])

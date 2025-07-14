@@ -103,3 +103,10 @@ static enum HttpMethodE http_get_method_from_string(str_view_t string)
     }
     return HTTP_METHOD_UNKNOWN;
 }
+
+err_t http_message_free(HttpMessage message[static 1])
+{
+    string_free(&message->message_buffer);
+    free(message->elements);
+    return SUCCESS;
+}

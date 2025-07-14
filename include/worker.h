@@ -17,4 +17,5 @@ err_t worker_process(HttpMessage msg[static 1], s32 client_fd,
 
 err_t worker_add_request(Client client[static 1]);
 err_t worker_boot(void);
+void worker_close(void);
 #endif

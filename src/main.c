@@ -1,6 +1,8 @@
 #include "server.h"
+#include "worker.h"
 #include <stdio.h>
 #include <str.h>
+#include <unistd.h>
 
 int main(int, char **)
 {
@@ -15,8 +17,8 @@ int main(int, char **)
         printf("Error\n");
         return -1;
     }
-    while (1)
-    {
-    }
+    sleep(10);
+    worker_close();
+    server_close(&server);
     return 0;
 }

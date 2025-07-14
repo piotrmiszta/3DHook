@@ -18,6 +18,8 @@ constexpr s32 port = 8080;
 constexpr s32 epoll_max_file_descrptors = 1000;
 constexpr s32 epoll_max_events = 100;
 
+static volatile bool server_run = false;
+
 static void *server_thread(void *arg);
 static err_t server_set_noblock(s32 fd);
 static err_t server_add_event(s32 epoll, s32 fd, u32 state);
@@ -28,6 +30,7 @@ static err_t server_handle_events(s32 epoll, struct epoll_event *events,
 
 err_t server_boot(Server server[restrict static 1])
 {
+    server_run = true;
     worker_boot();
     int32_t fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd <= 0)
@@ -86,11 +89,12 @@ static void *server_thread(void *arg)
     Server *server = arg;
     server_set_noblock(server->socket);
     server_add_event(epoll, server->socket, EPOLLIN);
-    while (1)
+    while (server_run)
     {
         s32 no_events = epoll_wait(epoll, events, epoll_max_events, 100);
         server_handle_events(epoll, events, no_events, server);
     }
+    return NULL;
 }
 
 static err_t server_set_noblock(s32 fd)
@@ -127,10 +131,23 @@ static err_t server_accept_client(s32 epoll, Server *server)
     return SUCCESS;
 }
 
+static err_t server_remove_client(Client *client)
+{
+    list_rem_entry(&client->list);
+    log_trace("Disconnected client: %d", client->socket);
+    free(client);
+    return SUCCESS;
+}
+
 static err_t server_read(Client *client)
 {
     char buffer[1024] = {};
     ssize_t readed = read(client->socket, buffer, 1024);
+    if (readed <= 0)
+    {
+        server_remove_client(client);
+        return EGENRIC;
+    }
     str_t message = string_create_from_buff(readed - 1, buffer);
     client->message = message;
     worker_add_request(client);
@@ -140,8 +157,8 @@ static err_t server_read(Client *client)
 
 static err_t server_write(Client *client)
 {
-    string_fprintf(stdout, &client->reponse);
     write(client->socket, client->reponse.data, client->reponse.size);
+    string_free(&client->reponse);
     return SUCCESS;
 }
 
@@ -173,7 +190,13 @@ static err_t server_handle_events(s32 epoll, struct epoll_event *events,
             if (events[i].events & EPOLLIN)
             {
                 log_debug("server read");
-                server_read(c);
+                if (server_read(c) == EGENRIC)
+                {
+                    epoll_ctl(epoll, EPOLL_CTL_DEL, fd, NULL);
+                    close(fd);
+                    continue;
+                }
+
                 struct epoll_event ev;
                 ev.events = EPOLLOUT;
                 ev.data.fd = fd;
@@ -189,6 +212,26 @@ static err_t server_handle_events(s32 epoll, struct epoll_event *events,
                 epoll_ctl(epoll, EPOLL_CTL_MOD, fd, &ev);
             }
         }
+    }
+    return SUCCESS;
+}
+
+err_t server_close(Server server[static 1])
+{
+    server_run = false;
+    pthread_join(server->thread, NULL);
+    list_t *clients = server->clients.next;
+    while (clients != &server->clients)
+    {
+        Client *cl = list_get_ptr(clients, Client, list);
+        clients = clients->next;
+        if (cl->reponse.data)
+        {
+            string_free(&cl->reponse);
+        }
+
+        close(cl->socket);
+        free(cl);
     }
     return SUCCESS;
 }

@@ -17,6 +17,8 @@ typedef struct Client
     str_t message;
     str_t reponse;
     volatile bool response_ready;
+    /* TODO: if we store here message and response,
+       we need to make sure that nothing will replace this strings */
 } Client;
 
 typedef struct Server
@@ -29,5 +31,7 @@ typedef struct Server
 
 [[nodiscard("Function can fail, depend on platform")]]
 err_t server_boot(Server server[static 1]);
+
+err_t server_close(Server server[static 1]);
 
 #endif
