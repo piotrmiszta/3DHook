@@ -243,3 +243,103 @@ err_t server_close(Server server[static 1])
     }
     return SUCCESS;
 }
+
+static err_t server_set_noblock(s32 fd)
+{
+    s32 flags = fcntl(fd, F_GETFL, 0);
+    ASSERT(flags >= 0, "Cannot get flags from FD"); // TODO: error handling
+    flags |= O_NONBLOCK;
+    auto res = fcntl(fd, F_SETFL, flags);
+    ASSERT(res >= 0, "Cannot set flags for FD");
+    return SUCCESS;
+}
+
+static err_t server_add_event(s32 epoll, s32 fd, u32 state)
+{
+    struct epoll_event ev;
+    ev.data.fd = fd;
+    ev.events = state;
+    auto res = epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &ev);
+    ASSERT(res >= 0, "Cannot add event for FD");
+    return SUCCESS;
+}
+
+static err_t server_accept_client(s32 epoll, Server *server)
+{
+    Client *client = calloc(1, sizeof(Client));
+    ASSERT(client, "Cannot alloc!");
+    socklen_t len = 0;
+    client->socket =
+        accept(server->socket, (struct sockaddr *)&client->addr, &len);
+    ASSERT(client->socket > 0, "Cannot accept client!");
+    log_trace("Accepted new client %d", client->socket);
+    list_add_tail(&client->list, &server->clients);
+    server_add_event(epoll, client->socket, EPOLLIN);
+    return SUCCESS;
+}
+
+static err_t server_read(Client *client)
+{
+    char buffer[1024] = {};
+    ssize_t readed = read(client->socket, buffer, 1024);
+    str_t message = string_create_from_buff(readed - 1, buffer);
+    client->message = message;
+    worker_add_request(client);
+    string_fprintf(stdout, &message);
+    return SUCCESS;
+}
+
+static err_t server_write(Client *client)
+{
+    string_fprintf(stdout, &client->reponse);
+    write(client->socket, client->reponse.data, client->reponse.size);
+    return SUCCESS;
+}
+
+static err_t server_handle_events(s32 epoll, struct epoll_event *events,
+                                  s32 events_count, Server *server)
+{
+    for (s32 i = 0; i < events_count; i++)
+    {
+        s32 fd = events[i].data.fd;
+        if (fd == server->socket)
+        {
+            server_accept_client(epoll, server);
+        }
+        else
+        {
+            list_t *list = server->clients.next;
+            Client *c = NULL;
+            while (list != &server->clients)
+            {
+                c = list_get_ptr(list, Client, list);
+                if (c->socket == fd)
+                {
+                    log_debug("found client %d", c->socket);
+                    break;
+                }
+
+                list = list->next;
+            }
+            if (events[i].events & EPOLLIN)
+            {
+                log_debug("server read");
+                server_read(c);
+                struct epoll_event ev;
+                ev.events = EPOLLOUT;
+                ev.data.fd = fd;
+                epoll_ctl(epoll, EPOLL_CTL_MOD, fd, &ev);
+            }
+            else if (events[i].events & EPOLLOUT && c->response_ready)
+            {
+                log_debug("server write");
+                server_write(c);
+                struct epoll_event ev;
+                ev.events = EPOLLIN;
+                ev.data.fd = fd;
+                epoll_ctl(epoll, EPOLL_CTL_MOD, fd, &ev);
+            }
+        }
+    }
+    return SUCCESS;
+}
