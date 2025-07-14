@@ -278,10 +278,23 @@ static err_t server_accept_client(s32 epoll, Server *server)
     return SUCCESS;
 }
 
+static err_t server_remove_client(Client *client)
+{
+    list_rem_entry(&client->list);
+    log_trace("Disconnected client: %d", client->socket);
+    free(client);
+    return SUCCESS;
+}
+
 static err_t server_read(Client *client)
 {
     char buffer[1024] = {};
     ssize_t readed = read(client->socket, buffer, 1024);
+    if (readed <= 0)
+    {
+        server_remove_client(client);
+        return EGENRIC;
+    }
     str_t message = string_create_from_buff(readed - 1, buffer);
     client->message = message;
     worker_add_request(client);
@@ -291,8 +304,8 @@ static err_t server_read(Client *client)
 
 static err_t server_write(Client *client)
 {
-    string_fprintf(stdout, &client->reponse);
     write(client->socket, client->reponse.data, client->reponse.size);
+    string_free(&client->reponse);
     return SUCCESS;
 }
 
@@ -324,7 +337,13 @@ static err_t server_handle_events(s32 epoll, struct epoll_event *events,
             if (events[i].events & EPOLLIN)
             {
                 log_debug("server read");
-                server_read(c);
+                if (server_read(c) == EGENRIC)
+                {
+                    epoll_ctl(epoll, EPOLL_CTL_DEL, fd, NULL);
+                    close(fd);
+                    continue;
+                }
+
                 struct epoll_event ev;
                 ev.events = EPOLLOUT;
                 ev.data.fd = fd;
@@ -340,6 +359,26 @@ static err_t server_handle_events(s32 epoll, struct epoll_event *events,
                 epoll_ctl(epoll, EPOLL_CTL_MOD, fd, &ev);
             }
         }
+    }
+    return SUCCESS;
+}
+
+err_t server_close(Server server[static 1])
+{
+    server_run = false;
+    pthread_join(server->thread, NULL);
+    list_t *clients = server->clients.next;
+    while (clients != &server->clients)
+    {
+        Client *cl = list_get_ptr(clients, Client, list);
+        clients = clients->next;
+        if (cl->reponse.data)
+        {
+            string_free(&cl->reponse);
+        }
+
+        close(cl->socket);
+        free(cl);
     }
     return SUCCESS;
 }
