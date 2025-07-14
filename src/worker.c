@@ -120,7 +120,6 @@ static void *worker_thread(void *)
 {
     while (1)
     {
-        // TODO: add returning from this func
         sem_wait(&state.que_full);
         if (worker_run == false)
         {
@@ -138,15 +137,13 @@ static void *worker_thread(void *)
         log_debug("Popped client from que");
         HttpMessage msg;
         http_message_parse(&msg, req->message);
-        if (req->reponse.data)
-        {
-            string_free(&req->reponse);
-            req->reponse.data = nullptr;
-            req->reponse.size = 0;
-            req->reponse.capacity = 0;
-        }
-        worker_process(&msg, req->socket, &req->reponse);
+
+        str_t response;
+        worker_process(&msg, req->socket, &response);
+        pthread_mutex_lock(&req->mtx);
+        req->reponse = response;
         req->response_ready = true;
+        pthread_mutex_unlock(&req->mtx);
         http_message_free(&msg);
     }
     return NULL;

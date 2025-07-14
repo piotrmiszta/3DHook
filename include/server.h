@@ -1,6 +1,7 @@
 #ifndef SERVER_H_
 #define SERVER_H_
 
+#include <bits/pthreadtypes.h>
 #include <netinet/in.h>
 #include <pthread.h>
 
@@ -17,6 +18,7 @@ typedef struct Client
     str_t message;
     str_t reponse;
     volatile bool response_ready;
+    pthread_mutex_t mtx;
     /* TODO: if we store here message and response,
        we need to make sure that nothing will replace this strings */
 } Client;
