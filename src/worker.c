@@ -52,7 +52,7 @@ err_t worker_add_request(Client client[static 1])
     }
     pthread_mutex_unlock(&state.mtx);
     sem_post(&state.que_full);
-    log_debug("Added client from que");
+
     return SUCCESS;
 }
 
@@ -82,14 +82,10 @@ static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
            "msg method is not equal to msg_get in worker_process_get()");
     char buffer[256] = {0};
     str_view_t path = string_view_join(&path_to_root, &msg->url, buffer, 256);
-    string_view_fprintf(stdout, &msg->url);
     if (string_view_equal(&msg->url, &STRING_VIEW_CSTR("/")) == true)
     {
-        printf("Path is root! \n");
         path = string_view_join(&path_to_root, &STRING_VIEW_CSTR("home.html"),
                                 buffer, 256);
-        string_view_fprintf(stdout, &path);
-        printf("\n");
     }
 
     if (!path.data)
@@ -97,10 +93,18 @@ static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
         return EMEMORY;
     }
 
+    str_t file = get_file_to_memory(path);
+    if (file.data == nullptr)
+    {
+        log_warning("Invalid file!: ");
+        string_view_fprintf(stdout, &path);
+        printf(" rejected request\n");
+        return EGENRIC;
+    }
+
     str_t response_header =
         string_create_from_cstr("HTTP/1.1 200 OK\n"
                                 "Content-Type: text/html\n");
-    str_t file = get_file_to_memory(path);
     char content_len[100];
     sprintf(content_len, "Content-Length: %lu\n\n", file.size);
     str_t con_len = string_create_from_buff(strlen(content_len), content_len);
@@ -110,11 +114,10 @@ static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
     *result = response_header;
     if (result->data == nullptr)
     {
-        log_error("Cannot allocate memory for result message to client %d",
+        log_error("Cannot allocate memory for result message to client %d\n",
                   client_fd);
         return EMEMORY;
     }
-    string_fprintf(stdout, result);
     string_free(&file);
     string_free(&con_len);
     return SUCCESS;
@@ -138,17 +141,25 @@ static void *worker_thread(void *)
         }
         pthread_mutex_unlock(&state.mtx);
         sem_post(&state.que_empty);
-        log_debug("Popped client from que");
         HttpMessage msg;
-        http_message_parse(&msg, req->message);
+        if (http_message_parse(&msg, req->message) != SUCCESS)
+        {
+            log_warning("Received unknown message!\n");
+            continue;
+        }
 
         str_t response;
-        worker_process(&msg, req->socket, &response);
+        auto err = worker_process(&msg, req->socket, &response);
+        http_message_free(&msg);
+        if (err != SUCCESS)
+        {
+            continue;
+        }
+
         pthread_mutex_lock(&req->mtx);
         req->reponse = response;
         req->response_ready = true;
         pthread_mutex_unlock(&req->mtx);
-        http_message_free(&msg);
     }
     return NULL;
 }
