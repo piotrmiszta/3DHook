@@ -95,7 +95,7 @@ static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
         return EMEMORY;
     }
 
-    str_view_t html = http_gen_get_page(path);
+    str_t html = http_gen_get_page(path);
     if (html.data == nullptr)
     {
         return EGENRIC;
@@ -108,8 +108,8 @@ static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
     sprintf(content_len, "Content-Length: %lu\n\n", html.size);
     str_t con_len = string_create_from_buff(strlen(content_len), content_len);
     string_join(&response_header, &con_len);
-    string_join_str_view(&response_header, &html);
-
+    string_join(&response_header, &html);
+    string_free(&html);
     *result = response_header;
     if (result->data == nullptr)
     {
@@ -179,4 +179,5 @@ void worker_close(void)
     {
         pthread_join(thread[i], NULL);
     }
+    free(th_nm);
 }

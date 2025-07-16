@@ -12,15 +12,41 @@ str_view_t WELCOME_PAGE =
                            "</body>\n"
                            "</html>\n");
 
-str_view_t http_gen_get_page(str_view_t path)
+str_view_t DATABASE_BEGIN = CONST_STRING_VIEW_CSTR("<!DOCTYPE html>\n"
+                                                   "<html>\n"
+                                                   "<body>\n"
+                                                   "<h1>Database page</h1>\n");
+
+str_view_t DATABASE_END =
+    CONST_STRING_VIEW_CSTR("<a href=\"home.html\"> Main page </a>\n"
+                           "</body>\n"
+                           "</html>\n");
+
+str_t http_gen_get_page(str_view_t path)
 {
     if (string_view_equal(&path, &STRING_VIEW_CSTR("/")) == true)
     {
-        log_debug("Returned welcome page!");
-        return WELCOME_PAGE;
+        log_debug("Returned welcome page!\n");
+        str_t string = string_from_str_view(&WELCOME_PAGE);
+        return string;
+    }
+    else if (string_view_equal(&path, &STRING_VIEW_CSTR("/home.html")) == true)
+    {
+        log_debug("Returned welcome page!\n");
+        str_t string = string_from_str_view(&WELCOME_PAGE);
+        return string;
+    }
+    else if (string_view_equal(&path, &STRING_VIEW_CSTR("/database.html")) ==
+             true)
+    {
+        log_debug("Returned database page!\n");
+        str_t string = string_from_str_view(&DATABASE_BEGIN);
+        string_join_str_view(&string, &DATABASE_END);
+        return string;
     }
     else
     {
-        return (str_view_t){nullptr, 0, false};
+        log_error("Unknown url!\n");
+        return (str_t){nullptr, 0, false};
     }
 }
