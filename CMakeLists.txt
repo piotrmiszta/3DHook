@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10.0)
 project(http_server VERSION 0.1.0 LANGUAGES C)
 
 set (CMAKE_C_COMPILER gcc)
-set (CMAKE_C_FLAGS "-std=c2x -ggdb3 -Wall -pedantic -Werror -O0")
+set (CMAKE_C_FLAGS "-std=c2x -ggdb3 -Wall -pedantic -Werror -O2")
 
 add_library(http_server_lib STATIC
 			    src/server.c

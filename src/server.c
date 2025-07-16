@@ -170,7 +170,6 @@ static err_t server_write(Client *client)
         log_error("Response was not writted!");
     }
     client->response_ready = false;
-    string_free(&client->reponse);
     pthread_mutex_unlock(&client->mtx);
     log_trace("Sending message to client %d\n", client->socket);
     return SUCCESS;
@@ -238,11 +237,6 @@ err_t server_close(Server server[static 1])
     {
         Client *cl = list_get_ptr(clients, Client, list);
         clients = clients->next;
-        if (cl->reponse.data)
-        {
-            string_free(&cl->reponse);
-        }
-
         close(cl->socket);
         free(cl);
     }

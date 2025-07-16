@@ -6,6 +6,7 @@
 #include "str.h"
 #include "utils.h"
 #include <bits/pthreadtypes.h>
+
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
@@ -29,6 +30,13 @@ typedef struct WorkerState
 
 static WorkerState state;
 static void *worker_thread(void *);
+constexpr u32 cache_size = 10;
+u32 cache_add_index = 0;
+struct
+{
+    str_t html;
+    str_t path;
+} cache[cache_size];
 
 u32 *th_nm;
 err_t worker_boot(void)
@@ -83,6 +91,41 @@ err_t worker_process(HttpMessage msg[static 1], s32 client_fd,
     return SUCCESS;
 }
 
+static bool check_in_cache(str_view_t path, str_t response[static 1])
+{
+    for (u32 i = 0; i < cache_size; i++)
+    {
+        if (cache[i].path.data != nullptr)
+        {
+            str_view_t p = string_view_create_from_string(&cache[i].path);
+            if (string_view_equal(&path, &p) == true)
+            {
+                *response = cache[i].html;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static bool add_to_cache(str_t path, str_t output)
+{
+    if (cache_add_index == cache_size)
+    {
+        cache_add_index = 0;
+    }
+    if (cache[cache_add_index].html.data == nullptr)
+    {
+        string_free(&cache[cache_add_index].html);
+        string_free(&cache[cache_add_index].path);
+    }
+    log_debug("added to cache!\n");
+    cache[cache_add_index].html = output;
+    cache[cache_add_index].path = path;
+    cache_add_index++;
+    return true;
+}
+
 static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
                                 str_t result[static 1])
 {
@@ -94,6 +137,13 @@ static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
     {
         return EMEMORY;
     }
+
+    if (check_in_cache(path, result))
+    {
+        log_debug("Get from cache!\n");
+        return SUCCESS;
+    }
+    log_debug("Not found in cache!\n");
 
     str_t html = http_gen_get_page(path);
     if (html.data == nullptr)
@@ -118,6 +168,9 @@ static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
         return EMEMORY;
     }
     string_free(&con_len);
+
+    add_to_cache(string_from_str_view(&path), *result);
+
     return SUCCESS;
 }
 
@@ -180,4 +233,13 @@ void worker_close(void)
         pthread_join(thread[i], NULL);
     }
     free(th_nm);
+    /* clean cache */
+    for (u32 i = 0; i < cache_size; i++)
+    {
+        if (cache[i].html.data != nullptr)
+        {
+            string_free(&cache[i].html);
+            string_free(&cache[i].path);
+        }
+    }
 }
