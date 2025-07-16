@@ -10,7 +10,7 @@
 #define YELLOW "\033[1;33m"
 #define RESET "\x1B[0m"
 
-#if 1
+#if 0
 
 #define log(stream, file, line, level, ...)                                    \
     do                                                                         \
