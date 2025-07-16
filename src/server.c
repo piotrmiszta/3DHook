@@ -163,7 +163,12 @@ static err_t server_read(Client *client)
 static err_t server_write(Client *client)
 {
     pthread_mutex_lock(&client->mtx);
-    write(client->socket, client->reponse.data, client->reponse.size);
+    ssize_t writed =
+        write(client->socket, client->reponse.data, client->reponse.size);
+    if (writed != client->reponse.size)
+    {
+        log_error("Response was not writted!");
+    }
     client->response_ready = false;
     string_free(&client->reponse);
     pthread_mutex_unlock(&client->mtx);

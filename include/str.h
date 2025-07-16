@@ -43,6 +43,7 @@ str_t string_copy(const str_t string[static 1]);
 str_t string_from_str_view(const str_view_t string[static 1]);
 void string_free(str_t string[static 1]);
 
+bool string_join_str_view(str_t dest[static 1], const str_view_t src[static 1]);
 bool string_join(str_t dest[static 1], const str_t src[static 1]);
 void string_to_upper(str_t string[static 1]);
 void string_to_lower(str_t string[static 1]);

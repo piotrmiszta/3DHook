@@ -41,7 +41,6 @@ err_t http_message_parse(HttpMessage message[static 1], str_t buff)
     message->method = http_get_method_from_string(method);
 
     message->url = url;
-
     HttpHeaderElement elements[max_header_elements];
     message->elements_count = 0;
     while (true)
