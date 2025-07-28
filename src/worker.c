@@ -1,4 +1,5 @@
 #include "worker.h"
+#include "database.h"
 #include "err_codes.h"
 #include "http_gen.h"
 #include "http_parser.h"
@@ -26,6 +27,7 @@ typedef struct WorkerState
     sem_t que_full;
     sem_t que_empty;
     Client *que[max_clients_in_que];
+    Database database;
 } WorkerState;
 
 static WorkerState state;
@@ -145,31 +147,48 @@ static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
     }
     log_debug("Not found in cache!\n");
 
-    str_t html = http_gen_get_page(path);
+    str_t html = http_gen_get_page(path, &state.database);
     if (html.data == nullptr)
     {
-        return EGENRIC;
+        log_trace("Received unknown url from client: %d url: ", client_fd);
+        string_view_fprintf(stdout, &msg->url);
+        fprintf(stdout, "\n");
+        str_t response_header_404 =
+            string_create_from_cstr("HTTP/1.1 404 Not Found\r\n"
+                                    "Content-Type: text/html\r\n"
+                                    "Content-Length: 85\r\n"
+                                    "\r\n"
+                                    "<html><body><h1>404 Not Found</h1><p>The "
+                                    "requested resource was not "
+                                    "found.</p></body></html>");
+        *result = response_header_404;
+        return SUCCESS;
     }
-
-    str_t response_header =
-        string_create_from_cstr("HTTP/1.1 200 OK\n"
-                                "Content-Type: text/html\n");
-    char content_len[100];
-    sprintf(content_len, "Content-Length: %lu\n\n", html.size);
-    str_t con_len = string_create_from_buff(strlen(content_len), content_len);
-    string_join(&response_header, &con_len);
-    string_join(&response_header, &html);
-    string_free(&html);
-    *result = response_header;
-    if (result->data == nullptr)
+    else
     {
-        log_error("Cannot allocate memory for result message to client %d\n",
-                  client_fd);
-        return EMEMORY;
-    }
-    string_free(&con_len);
+        str_t response_header =
+            string_create_from_cstr("HTTP/1.1 200 OK\n"
+                                    "Content-Type: text/html\n");
 
-    add_to_cache(string_from_str_view(&path), *result);
+        char content_len[100];
+        sprintf(content_len, "Content-Length: %lu\n\n", html.size);
+        str_t con_len =
+            string_create_from_buff(strlen(content_len), content_len);
+        string_join(&response_header, &con_len);
+        string_join(&response_header, &html);
+        string_free(&html);
+        *result = response_header;
+        if (result->data == nullptr)
+        {
+            log_error(
+                "Cannot allocate memory for result message to client %d\n",
+                client_fd);
+            return EMEMORY;
+        }
+        string_free(&con_len);
+
+        add_to_cache(string_from_str_view(&path), *result);
+    }
 
     return SUCCESS;
 }

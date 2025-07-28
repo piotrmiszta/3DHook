@@ -41,6 +41,7 @@ err_t http_message_parse(HttpMessage message[static 1], str_t buff)
     message->method = http_get_method_from_string(method);
 
     message->url = url;
+    message->elements = nullptr;
     HttpHeaderElement elements[max_header_elements];
     message->elements_count = 0;
     while (true)
@@ -77,7 +78,6 @@ err_t http_message_parse(HttpMessage message[static 1], str_t buff)
 
     memcpy(message->elements, elements,
            sizeof(*elements) * message->elements_count);
-
     return SUCCESS;
 }
 
@@ -108,6 +108,10 @@ static enum HttpMethodE http_get_method_from_string(str_view_t string)
 err_t http_message_free(HttpMessage message[static 1])
 {
     string_free(&message->message_buffer);
-    free(message->elements);
+    if (message->elements)
+    {
+        free(message->elements);
+    }
+
     return SUCCESS;
 }

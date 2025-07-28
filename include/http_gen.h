@@ -3,6 +3,7 @@
 
 #include "str.h"
 
-str_t http_gen_get_page(str_view_t path);
+str_t http_gen_get_page(str_view_t path, void *arg);
+void http_gen_init_database(void);
 
 #endif

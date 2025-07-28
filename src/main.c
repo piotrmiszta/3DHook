@@ -17,9 +17,7 @@ int main(int, char **)
         printf("Error\n");
         return -1;
     }
-    while (1)
-    {
-    }
+    sleep(30);
     worker_close();
     server_close(&server);
     return 0;

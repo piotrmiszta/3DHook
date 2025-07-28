@@ -1,5 +1,7 @@
 #include "server.h"
+#include "database.h"
 #include "err_codes.h"
+#include "http_gen.h"
 #include "http_parser.h"
 #include "list.h"
 #include "logger.h"
@@ -33,6 +35,7 @@ static err_t server_handle_events(s32 epoll, struct epoll_event *events,
 err_t server_boot(Server server[restrict static 1])
 {
     server_run = true;
+    database_create();
     worker_boot();
     int32_t fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd <= 0)
@@ -240,5 +243,6 @@ err_t server_close(Server server[static 1])
         close(cl->socket);
         free(cl);
     }
+    database_destroy();
     return SUCCESS;
 }
