@@ -1,5 +1,7 @@
 #include "server.h"
+#include "database.h"
 #include "err_codes.h"
+#include "http_gen.h"
 #include "http_parser.h"
 #include "list.h"
 #include "logger.h"
@@ -33,6 +35,7 @@ static err_t server_handle_events(s32 epoll, struct epoll_event *events,
 err_t server_boot(Server server[restrict static 1])
 {
     server_run = true;
+    database_create();
     worker_boot();
     int32_t fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd <= 0)
@@ -163,9 +166,13 @@ static err_t server_read(Client *client)
 static err_t server_write(Client *client)
 {
     pthread_mutex_lock(&client->mtx);
-    write(client->socket, client->reponse.data, client->reponse.size);
+    ssize_t writed =
+        write(client->socket, client->reponse.data, client->reponse.size);
+    if (writed != client->reponse.size)
+    {
+        log_error("Response was not writted!");
+    }
     client->response_ready = false;
-    string_free(&client->reponse);
     pthread_mutex_unlock(&client->mtx);
     log_trace("Sending message to client %d\n", client->socket);
     return SUCCESS;
@@ -233,13 +240,9 @@ err_t server_close(Server server[static 1])
     {
         Client *cl = list_get_ptr(clients, Client, list);
         clients = clients->next;
-        if (cl->reponse.data)
-        {
-            string_free(&cl->reponse);
-        }
-
         close(cl->socket);
         free(cl);
     }
+    database_destroy();
     return SUCCESS;
 }

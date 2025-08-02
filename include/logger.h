@@ -10,6 +10,8 @@
 #define YELLOW "\033[1;33m"
 #define RESET "\x1B[0m"
 
+#if 1
+
 #define log(stream, file, line, level, ...)                                    \
     do                                                                         \
     {                                                                          \
@@ -18,7 +20,7 @@
     } while (0)
 
 #define log_debug(...)                                                         \
-    log(stdout, __FILE__, __LINE__, BLUE "[DEBUG]" RESET, __VA_ARGS__)
+    //    log(stdout, __FILE__, __LINE__, BLUE "[DEBUG]" RESET, __VA_ARGS__)
 #define log_error(...)                                                         \
     log(stdout, __FILE__, __LINE__, RED "[ERROR]" RESET, __VA_ARGS__)
 #define log_warning(...)                                                       \
@@ -28,4 +30,13 @@
 #define log_trace(...)                                                         \
     log(stdout, __FILE__, __LINE__, CYAN "[TRACE]" RESET, __VA_ARGS__)
 
+#else
+
+#define log_debug(...)
+#define log_error(...)
+#define log_warning(...)
+#define log_info(...)
+#define log_trace(...)
+
+#endif
 #endif

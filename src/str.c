@@ -98,6 +98,22 @@ void string_free(str_t string[static 1])
     string->valid = false;
 }
 
+bool string_join_str_view(str_t dest[static 1], const str_view_t src[static 1])
+{
+    u64 result_size = dest->size + src->size;
+    if (dest->capacity < result_size)
+    {
+        /* need a realloc */
+        if (!realloc_str(dest, result_size))
+        {
+            return false;
+        }
+    }
+    memcpy(&dest->data[dest->size], src->data, src->size);
+    dest->size = result_size;
+    return true;
+}
+
 bool string_join(str_t dest[static 1], const str_t src[static 1])
 {
     u64 result_size = dest->size + src->size;

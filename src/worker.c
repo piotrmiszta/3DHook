@@ -1,17 +1,23 @@
 #include "worker.h"
+#include "database.h"
 #include "err_codes.h"
+#include "http_gen.h"
 #include "http_parser.h"
 #include "logger.h"
 #include "str.h"
 #include "utils.h"
 #include <bits/pthreadtypes.h>
+
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-constexpr u32 max_clients_in_que = 10;
-static volatile bool worker_run = false;
+constexpr u32 max_clients_in_que = 100;
+constexpr u32 max_workers = 6;
+static volatile bool worker_run[max_workers] = {0};
+static pthread_t thread[max_workers];
 
 typedef struct WorkerState
 {
@@ -21,22 +27,36 @@ typedef struct WorkerState
     sem_t que_full;
     sem_t que_empty;
     Client *que[max_clients_in_que];
-    pthread_t thread;
+    Database database;
 } WorkerState;
 
 static WorkerState state;
-
 static void *worker_thread(void *);
+constexpr u32 cache_size = 10;
+u32 cache_add_index = 0;
+struct
+{
+    str_t html;
+    str_t path;
+} cache[cache_size];
 
+u32 *th_nm;
 err_t worker_boot(void)
 {
-    worker_run = true;
+    th_nm = malloc(sizeof(u32) * max_workers);
+    for (int32_t i = 0; i < max_workers; i++)
+    {
+        th_nm[i] = i;
+        worker_run[i] = true;
+        pthread_create(&thread[i], NULL, worker_thread, &th_nm[i]);
+    }
+
     state.add_index = 0;
     state.get_index = 0;
     pthread_mutex_init(&state.mtx, NULL);
     sem_init(&state.que_empty, 0, max_clients_in_que);
     sem_init(&state.que_full, 0, 0);
-    pthread_create(&state.thread, NULL, worker_thread, NULL);
+
     return SUCCESS;
 }
 
@@ -56,8 +76,6 @@ err_t worker_add_request(Client client[static 1])
     return SUCCESS;
 }
 
-static str_view_t path_to_root = CONST_STRING_VIEW_CSTR("/var/www/html/");
-
 static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
                                 str_t result[static 1]);
 
@@ -75,60 +93,114 @@ err_t worker_process(HttpMessage msg[static 1], s32 client_fd,
     return SUCCESS;
 }
 
+static bool check_in_cache(str_view_t path, str_t response[static 1])
+{
+    for (u32 i = 0; i < cache_size; i++)
+    {
+        if (cache[i].path.data != nullptr)
+        {
+            str_view_t p = string_view_create_from_string(&cache[i].path);
+            if (string_view_equal(&path, &p) == true)
+            {
+                *response = cache[i].html;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static bool add_to_cache(str_t path, str_t output)
+{
+    if (cache_add_index == cache_size)
+    {
+        cache_add_index = 0;
+    }
+    if (cache[cache_add_index].html.data == nullptr)
+    {
+        string_free(&cache[cache_add_index].html);
+        string_free(&cache[cache_add_index].path);
+    }
+    log_debug("added to cache!\n");
+    cache[cache_add_index].html = output;
+    cache[cache_add_index].path = path;
+    cache_add_index++;
+    return true;
+}
+
 static err_t worker_process_get(HttpMessage msg[static 1], s32 client_fd,
                                 str_t result[static 1])
 {
     ASSERT(msg->method == HTTP_METHOD_GET,
            "msg method is not equal to msg_get in worker_process_get()");
-    char buffer[256] = {0};
-    str_view_t path = string_view_join(&path_to_root, &msg->url, buffer, 256);
-    if (string_view_equal(&msg->url, &STRING_VIEW_CSTR("/")) == true)
-    {
-        path = string_view_join(&path_to_root, &STRING_VIEW_CSTR("home.html"),
-                                buffer, 256);
-    }
+    str_view_t path = msg->url;
 
     if (!path.data)
     {
         return EMEMORY;
     }
 
-    str_t file = get_file_to_memory(path);
-    if (file.data == nullptr)
+    if (check_in_cache(path, result))
     {
-        log_warning("Invalid file!: ");
-        string_view_fprintf(stdout, &path);
-        printf(" rejected request\n");
-        return EGENRIC;
+        log_debug("Get from cache!\n");
+        return SUCCESS;
+    }
+    log_debug("Not found in cache!\n");
+
+    str_t html = http_gen_get_page(path, &state.database);
+    if (html.data == nullptr)
+    {
+        log_trace("Received unknown url from client: %d url: ", client_fd);
+        string_view_fprintf(stdout, &msg->url);
+        fprintf(stdout, "\n");
+        str_t response_header_404 =
+            string_create_from_cstr("HTTP/1.1 404 Not Found\r\n"
+                                    "Content-Type: text/html\r\n"
+                                    "Content-Length: 85\r\n"
+                                    "\r\n"
+                                    "<html><body><h1>404 Not Found</h1><p>The "
+                                    "requested resource was not "
+                                    "found.</p></body></html>");
+        *result = response_header_404;
+        return SUCCESS;
+    }
+    else
+    {
+        str_t response_header =
+            string_create_from_cstr("HTTP/1.1 200 OK\n"
+                                    "Content-Type: text/html\n");
+
+        char content_len[100];
+        sprintf(content_len, "Content-Length: %lu\n\n", html.size);
+        str_t con_len =
+            string_create_from_buff(strlen(content_len), content_len);
+        string_join(&response_header, &con_len);
+        string_join(&response_header, &html);
+        string_free(&html);
+        *result = response_header;
+        if (result->data == nullptr)
+        {
+            log_error(
+                "Cannot allocate memory for result message to client %d\n",
+                client_fd);
+            return EMEMORY;
+        }
+        string_free(&con_len);
+
+        add_to_cache(string_from_str_view(&path), *result);
     }
 
-    str_t response_header =
-        string_create_from_cstr("HTTP/1.1 200 OK\n"
-                                "Content-Type: text/html\n");
-    char content_len[100];
-    sprintf(content_len, "Content-Length: %lu\n\n", file.size);
-    str_t con_len = string_create_from_buff(strlen(content_len), content_len);
-    string_join(&response_header, &con_len);
-    string_join(&response_header, &file);
-
-    *result = response_header;
-    if (result->data == nullptr)
-    {
-        log_error("Cannot allocate memory for result message to client %d\n",
-                  client_fd);
-        return EMEMORY;
-    }
-    string_free(&file);
-    string_free(&con_len);
     return SUCCESS;
 }
 
-static void *worker_thread(void *)
+static void *worker_thread(void *arg)
 {
+    u32 *num = arg;
+    u32 it = *num;
     while (1)
     {
         sem_wait(&state.que_full);
-        if (worker_run == false)
+        if (worker_run[it] == false)
         {
             return NULL;
         }
@@ -141,6 +213,7 @@ static void *worker_thread(void *)
         }
         pthread_mutex_unlock(&state.mtx);
         sem_post(&state.que_empty);
+        log_debug("Get %d client for %d worker\n", req->socket, it);
         HttpMessage msg;
         if (http_message_parse(&msg, req->message) != SUCCESS)
         {
@@ -166,7 +239,26 @@ static void *worker_thread(void *)
 
 void worker_close(void)
 {
-    worker_run = false;
-    sem_post(&state.que_full);
-    pthread_join(state.thread, NULL);
+    for (int32_t i = 0; i < max_workers; i++)
+    {
+        worker_run[i] = false;
+    }
+    for (int32_t i = 0; i < max_workers; i++)
+    {
+        sem_post(&state.que_full);
+    }
+    for (int32_t i = 0; i < max_workers; i++)
+    {
+        pthread_join(thread[i], NULL);
+    }
+    free(th_nm);
+    /* clean cache */
+    for (u32 i = 0; i < cache_size; i++)
+    {
+        if (cache[i].html.data != nullptr)
+        {
+            string_free(&cache[i].html);
+            string_free(&cache[i].path);
+        }
+    }
 }
